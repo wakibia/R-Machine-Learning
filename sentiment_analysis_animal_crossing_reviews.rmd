@@ -1,0 +1,195 @@
+---
+title: Sentiment Analysis - Animal Crossing Reviews
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE)
+theme_set(theme_minimal())
+```
+
+
+```{r data}
+user_reviews <- readr::read_tsv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-05-05/user_reviews.tsv")
+
+```
+
+
+Data Exploration
+
+```{r}
+user_reviews %>%
+  count(grade) %>%
+  ggplot(aes(grade, n)) +
+  geom_col(fill = "midnightblue", alpha = 0.7)
+```
+
+
+```{r}
+user_reviews %>%
+  filter(grade > 8) %>%
+  sample_n(5) %>%
+  pull(text)
+```
+
+
+```{r}
+reviews_parsed <- user_reviews %>%
+  mutate(text = str_remove(text, "Expand$")) %>%
+  mutate(rating = case_when(
+    grade > 7 ~ "good",
+    TRUE ~ "bad"
+  ))
+```
+
+Text Preprocessing
+
+```{r}
+library(tidytext)
+
+words_per_review <- reviews_parsed %>%
+  unnest_tokens(word, text) %>%
+  count(user_name, name = "total_words")
+
+```
+
+
+```{r}
+words_per_review %>%
+  ggplot(aes(total_words)) +
+  geom_histogram(fill = "midnightblue", alpha = 0.8)
+
+```
+
+
+Build a Model
+
+```{r}
+library(tidymodels)
+
+set.seed(123)
+review_split <- initial_split(reviews_parsed, strata = rating)
+review_train <- training(review_split)
+review_test <- testing(review_split)
+```
+
+
+Recipe to Preprocess the data before modeling
+
+```{r}
+library(textrecipes)
+
+review_rec <- recipe(rating ~ text, data = review_train) %>%
+  step_tokenize(text) %>%
+  step_stopwords(text) %>%
+  step_tokenfilter(text, max_tokens = 500) %>%
+  step_tfidf(text) %>%
+  step_normalize(all_predictors())
+
+review_prep <- prep(review_rec)
+
+review_prep
+```
+
+
+Lasso Regression
+
+
+```{r lasso Regression}
+lasso_spec <- logistic_reg(penalty = tune(), mixture = 1) %>%
+  set_engine("glmnet")
+
+lasso_wf <- workflow() %>%
+  add_recipe(review_rec) %>%
+  add_model(lasso_spec)
+
+lasso_wf
+```
+
+
+Tune Model Parameters
+
+
+```{r tune grid}
+lambda_grid <- grid_regular(penalty(), levels = 40)
+```
+
+Use Bootstrap Resampling
+
+```{r}
+set.seed(123)
+review_folds <- bootstraps(review_train, strata = rating)
+review_folds
+```
+
+Model Performance
+
+```{r}
+lasso_grid %>%
+  collect_metrics()
+```
+
+Visualize Performance
+
+```{r}
+lasso_grid %>%
+  collect_metrics()
+```
+
+
+
+Choose the Final Model
+
+
+```{r}
+best_auc <- lasso_grid %>%
+  select_best("roc_auc")
+
+best_auc
+```
+
+
+Feature Performance
+
+
+```{r}
+library(vip)
+
+final_lasso %>%
+  fit(review_train) %>%
+  pull_workflow_fit() %>%
+  vi(lambda = best_auc$penalty) %>%
+  group_by(Sign) %>%
+  top_n(20, wt = abs(Importance)) %>%
+  ungroup() %>%
+  mutate(
+    Importance = abs(Importance),
+    Variable = str_remove(Variable, "tfidf_text_"),
+    Variable = fct_reorder(Variable, Importance)
+  ) %>%
+  ggplot(aes(x = Importance, y = Variable, fill = Sign)) +
+  geom_col(show.legend = FALSE) +
+  facet_wrap(~Sign, scales = "free_y") +
+  labs(y = NULL)
+```
+
+
+Fit the best final model
+
+```{r}
+review_final <- last_fit(final_lasso, review_split)
+
+review_final %>%
+  collect_metrics()
+```
+
+
+
+```{r}
+review_final %>%
+  collect_predictions() %>%
+  conf_mat(rating, .pred_class)
+```
+

@@ -1,0 +1,7 @@
+"0","bird_preds <-"
+"0","  augment(bird_fit, new_bird_data) %>%"
+"0","  bind_cols("
+"0","    predict(bird_fit, new_bird_data, type = ""conf_int"")"
+"0","  )"
+"0",""
+"0","bird_preds"

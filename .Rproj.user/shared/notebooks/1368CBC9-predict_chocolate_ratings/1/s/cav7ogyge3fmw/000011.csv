@@ -1,0 +1,6 @@
+"0","url <- ""https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-01-18/chocolate.csv"""
+"0","chocolate <- read_csv(url)"
+"0",""
+"0","chocolate %>%"
+"0","  ggplot(aes(rating)) +"
+"0","  geom_histogram(bins = 15)"

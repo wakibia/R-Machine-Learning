@@ -1,0 +1,21 @@
+"0","svm_spec <-"
+"0","  svm_linear() %>%"
+"0","  set_mode(""regression"")"
+"0",""
+"0","svm_spec"
+"1","Linear Support Vector Machine"
+"1",""
+"1"," Model Specification ("
+"1",""
+"1","regression"
+"1",""
+"1",")
+
+"
+"1","Computational engine:"
+"1"," "
+"1","LiblineaR"
+"1"," "
+"1","
+
+"

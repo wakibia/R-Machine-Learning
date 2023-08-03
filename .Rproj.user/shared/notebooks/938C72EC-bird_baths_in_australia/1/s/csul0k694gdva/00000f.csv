@@ -1,0 +1,5 @@
+"0","new_bird_data <-"
+"0","  tibble(bird_type = top_birds) %>%"
+"0","  crossing(urban_rural = c(""Urban"", ""Rural""))"
+"0",""
+"0","new_bird_data"

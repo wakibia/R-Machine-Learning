@@ -1,0 +1,27 @@
+"0","ikea <- read_csv(""https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-11-03/ikea.csv"")"
+"0","glimpse(ikea)"
+"1","Rows: 3,694"
+"1",""
+"1","
+"
+"1","Columns: 14"
+"1",""
+"1","
+"
+"1","$ ...1              [3m[38;5;246m<dbl>[39m[23m 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 3…
+$ item_id           [3m[38;5;246m<dbl>[39m[23m 90420332, 368814, 9333523, 80155205, 30180504, 10122647, 70404875, 60155602, 50406465, 69304221, 90404879, 1217…
+$ name              [3m[38;5;246m<chr>[39m[23m ""FREKVENS"", ""NORDVIKEN"", ""NORDVIKEN / NORDVIKEN"", ""STIG"", ""NORBERG"", ""INGOLF"", ""FRANKLIN"", ""DALFRED"", ""FRANKLIN…
+$ category          [3m[38;5;246m<chr>[39m[23m ""Bar furniture"", ""Bar furniture"", ""Bar furniture"", ""Bar furniture"", ""Bar furniture"", ""Bar furniture"", ""Bar furn…
+$ price             [3m[38;5;246m<dbl>[39m[23m 265, 995, 2095, 69, 225, 345, 129, 195, 129, 2176, 149, 395, 395, 177, 345, 695, 395, 140, 595, 149, 995, 175, …
+$ old_price         [3m[38;5;246m<chr>[39m[23m ""No old price"", ""No old price"", ""No old price"", ""No old price"", ""No old price"", ""No old price"", ""No old price"",…
+$ sellable_online   [3m[38;5;246m<lgl>[39m[23m TRUE, FALSE, FALSE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, TRUE, T…
+$ link              [3m[38;5;246m<chr>[39m[23m ""https://www.ikea.com/sa/en/p/frekvens-bar-table-in-outdoor-black-90420332/"", ""https://www.ikea.com/sa/en/p/nor…
+$ other_colors      [3m[38;5;246m<chr>[39m[23m ""No"", ""No"", ""No"", ""Yes"", ""No"", ""No"", ""No"", ""No"", ""No"", ""No"", ""No"", ""No"", ""No"", ""No"", ""No"", ""No"", ""No"", ""Yes"", ""…
+$ short_description [3m[38;5;246m<chr>[39m[23m ""Bar table, in/outdoor,          51x51 cm"", ""Bar table,          140x80 cm"", ""Bar table and 4 bar stools"", ""Bar…
+$ designer          [3m[38;5;246m<chr>[39m[23m ""Nicholai Wiig Hansen"", ""Francis Cayouette"", ""Francis Cayouette"", ""Henrik Preutz"", ""Marcus Arvonen"", ""Carina Be…
+$ depth             [3m[38;5;246m<dbl>[39m[23m NA, NA, NA, 50, 60, 45, 44, 50, 44, NA, 44, 45, 47, 53, 52, NA, 51, 36, 36, 44, NA, 44, 36, NA, 51, 52, NA, 51,…
+$ height            [3m[38;5;246m<dbl>[39m[23m 99, 105, NA, 100, 43, 91, 95, NA, 95, NA, 103, 102, 103, 104, 114, 105, 102, NA, 84, 103, 105, 63, 84, 105, 114…
+$ width             [3m[38;5;246m<dbl>[39m[23m 51, 80, NA, 60, 74, 40, 50, 50, 50, NA, 52, 40, 46, 43, 43, 70, 40, 36, 38, 52, 80, 44, 38, 80, 43, 43, 80, 40,…"
+"1",""
+"1","
+"

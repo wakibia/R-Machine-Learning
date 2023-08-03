@@ -1,0 +1,7 @@
+"0","rec_basic <-"
+"0","  recipe(bird_count ~ urban_rural + bird_type, data = bird_train) %>%"
+"0","  "
+"0","  ## create dummy variables for all the nominal/categorical variables included"
+"0","  step_dummy(all_nominal_predictors())"
+"0",""
+"0","wf_basic <- workflow(rec_basic, glm_spec)"

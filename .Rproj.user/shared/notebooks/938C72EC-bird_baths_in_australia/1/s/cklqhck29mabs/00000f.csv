@@ -1,0 +1,5 @@
+"0","doParallel::registerDoParallel()"
+"0",""
+"0","## save the predictions made from the resampling"
+"0","ctrl_preds <- control_resamples(save_pred = TRUE)"
+"0","rs_basic <- fit_resamples(wf_basic, bird_folds, control = ctrl_preds)"

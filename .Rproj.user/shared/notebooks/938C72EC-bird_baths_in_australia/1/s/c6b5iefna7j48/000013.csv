@@ -1,0 +1,4 @@
+"0","bird_baths <- readr::read_csv(""https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-08-31/bird_baths.csv"")"
+"0",""
+"0","bird_baths %>%"
+"0","  count(urban_rural)"

@@ -1,0 +1,3 @@
+"0","augment(rs_interact) %>%"
+"0","  roc_curve(bird_count, .pred_bird) %>%"
+"0","  autoplot()"

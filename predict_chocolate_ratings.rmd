@@ -1,0 +1,212 @@
+---
+title: Predicting Chocolate Ratings Using Text Predictors
+---
+  
+  
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+theme_set(theme_minimal())
+
+```
+
+
+
+```{r Load-data}
+url <- "https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-01-18/chocolate.csv"
+chocolate <- read_csv(url)
+
+chocolate %>%
+  ggplot(aes(rating)) +
+  geom_histogram(bins = 15)
+```
+
+
+We will use text as predictors, thus we will have to perform text preprocessing
+
+
+```{r text-summary}
+library(tidytext)
+
+tidy_chocolate <-
+  chocolate %>%
+  unnest_tokens(word, most_memorable_characteristics)
+
+tidy_chocolate %>%
+  count(word, sort = TRUE)
+```
+
+
+Data Exploration for the text
+
+```{r}
+tidy_chocolate %>%
+  group_by(word) %>%
+  summarise(
+    n = n(),
+    rating = mean(rating)
+  ) %>%
+  ggplot(aes(n, rating)) +
+  geom_hline(
+    yintercept = mean(chocolate$rating), lty = 2,
+    color = "gray50", size = 1.5
+  ) +
+  geom_jitter(color = "midnightblue", alpha = 0.7) +
+  geom_text(aes(label = word),
+    check_overlap = TRUE, family = "IBMPlexSans",
+    vjust = "top", hjust = "left"
+  ) +
+  scale_x_log10()
+```
+
+
+Model
+
+```{r data-budget}
+library(tidymodels)
+
+set.seed(123)
+choco_split <- initial_split(chocolate, strata = rating)
+choco_train <- training(choco_split)
+choco_test <- testing(choco_split)
+
+set.seed(234)
+choco_folds <- vfold_cv(choco_train, strata = rating)
+choco_folds
+```
+
+
+Preprocess text data
+
+
+```{r text-preprocessing}
+library(textrecipes)
+
+choco_rec <-
+  recipe(rating ~ most_memorable_characteristics, data = choco_train) %>%
+  step_tokenize(most_memorable_characteristics) %>%
+  
+  ## we retain only tokens with freq >= 100
+  step_tokenfilter(most_memorable_characteristics, max_tokens = 100) %>%
+  
+  ## get the tf-idf
+  step_tfidf(most_memorable_characteristics)
+
+## just to check this works
+prep(choco_rec) %>% bake(new_data = NULL)
+```
+
+Random Forest
+
+```{r random-forest}
+rf_spec <-
+  rand_forest(trees = 500) %>%
+  set_mode("regression")
+
+rf_spec
+```
+
+SVM
+
+```{r svm}
+svm_spec <-
+  svm_linear() %>%
+  set_mode("regression")
+
+svm_spec
+```
+
+
+
+```{r model-workflows}
+svm_wf <- workflow(choco_rec, svm_spec)
+rf_wf <- workflow(choco_rec, rf_spec)
+```
+
+
+Model Evaluation - with resamples
+We are tuning nothing 
+
+```{r resampling-for-parameter-tuning}
+doParallel::registerDoParallel()
+
+## save the predictions from the resamples training
+contrl_preds <- control_resamples(save_pred = TRUE)
+
+svm_rs <- fit_resamples(
+  svm_wf,
+  resamples = choco_folds,
+  control = contrl_preds
+)
+
+ranger_rs <- fit_resamples(
+  rf_wf,
+  resamples = choco_folds,
+  control = contrl_preds
+)
+```
+
+
+Model Performance
+
+```{r svm-performance}
+collect_metrics(svm_rs)
+```
+
+The SVM performance here is somehow not very appealing
+
+
+```{r random-forest-performance}
+collect_metrics(ranger_rs)
+```
+
+The random forest performance here is somehow not very appealing and slightly worse than that of SVM
+
+Visualize the results - for each of the folds
+
+
+```{r}
+bind_rows(
+  collect_predictions(svm_rs) %>%
+    mutate(mod = "SVM"),
+  collect_predictions(ranger_rs) %>%
+    mutate(mod = "ranger")
+) %>%
+  ggplot(aes(rating, .pred, color = id)) +
+  geom_abline(lty = 2, color = "gray50", size = 1.2) +
+  geom_jitter(width = 0.5, alpha = 0.5) +
+  facet_wrap(vars(mod)) +
+  coord_fixed()
+```
+
+We choose SVM to train the data - it is faster to train. and has slightly higher performance. It also had slightly better performance than random forest
+
+```{r}
+final_fitted <- last_fit(svm_wf, choco_split)
+collect_metrics(final_fitted) ## metrics evaluated on the *testing* data
+```
+
+Extract the workflow - the object contains a fitted workflow that we can use for prediction
+
+```{r svm-final-workflow}
+final_wf <- extract_workflow(final_fitted)
+predict(final_wf, choco_test)
+```
+
+
+```{r visualize-the-final-model}
+extract_workflow(final_fitted) %>%
+  tidy() %>%
+  filter(term != "Bias") %>%
+  group_by(estimate > 0) %>%
+  slice_max(abs(estimate), n = 10) %>%
+  ungroup() %>%
+  mutate(term = str_remove(term, "tfidf_most_memorable_characteristics_")) %>%
+  ggplot(aes(estimate, fct_reorder(term, estimate), fill = estimate > 0)) +
+  geom_col(alpha = 0.8) +
+  scale_fill_discrete(labels = c("low ratings", "high ratings")) +
+  labs(y = NULL, fill = "More from...")
+```
+
+

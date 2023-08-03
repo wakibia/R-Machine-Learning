@@ -1,0 +1,28 @@
+"0","rf_spec <-"
+"0","  rand_forest(trees = 500) %>%"
+"0","  set_mode(""regression"")"
+"0",""
+"0","rf_spec"
+"1","Random Forest"
+"1",""
+"1"," Model Specification ("
+"1",""
+"1","regression"
+"1",""
+"1",")
+
+"
+"1","Main Arguments:
+"
+"1","  trees = 500
+"
+"1",""
+"1","
+"
+"1","Computational engine:"
+"1"," "
+"1","ranger"
+"1"," "
+"1","
+
+"

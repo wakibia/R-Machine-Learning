@@ -1,0 +1,6 @@
+"0","ikea_df <- ikea %>%"
+"0","  select(price, name, category, depth, height, width) %>%"
+"0","  mutate(price = log10(price)) %>%"
+"0","  mutate_if(is.character, factor)"
+"0",""
+"0","ikea_df"

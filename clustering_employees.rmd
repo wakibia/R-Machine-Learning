@@ -1,0 +1,105 @@
+---
+title: K-means clustering of employees employment status
+---
+  
+  
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE)
+theme_set(theme_minimal())
+
+```
+
+
+```{r load data}
+employed <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-02-23/employed.csv")
+
+```
+
+
+Data Exploration
+
+
+```{r}
+employed_tidy <- employed %>%
+  filter(!is.na(employ_n)) %>%
+  group_by(occupation = paste(industry, minor_occupation), race_gender) %>%
+  summarise(n = mean(employ_n)) %>%
+  ungroup()
+```
+
+
+Preprocess Data
+
+```{r}
+employment_demo <- employed_tidy %>%
+  filter(race_gender %in% c("Women", "Black or African American", "Asian")) %>%
+  pivot_wider(names_from = race_gender, values_from = n, values_fill = 0) %>%
+  janitor::clean_names() %>%
+  left_join(employed_tidy %>%
+    filter(race_gender == "TOTAL") %>%
+    select(-race_gender) %>%
+    rename(total = n)) %>%
+  filter(total > 1e3) %>%
+  mutate(across(c(asian, black_or_african_american, women), ~ . / (total)),
+    total = log(total),
+    across(where(is.numeric), ~ as.numeric(scale(.)))
+  ) %>%
+  mutate(occupation = snakecase::to_snake_case(occupation))
+
+employment_demo
+```
+
+Perform the Kmeans Clustering
+
+```{r}
+employment_clust <- kmeans(select(employment_demo, -occupation), centers = 3)
+summary(employment_clust)
+```
+
+Clusters
+
+```{r}
+library(broom)
+tidy(employment_clust)
+```
+
+
+`augment` our clusters to our datasets
+
+```{r}
+augment(employment_clust, employment_demo) %>%
+  ggplot(aes(total, black_or_african_american, color = .cluster)) +
+  geom_point()
+```
+
+
+Choose k using the elbow curve method
+
+```{r}
+kclusts <-
+  tibble(k = 1:9) %>%
+  mutate(
+    kclust = map(k, ~ kmeans(select(employment_demo, -occupation), .x)),
+    glanced = map(kclust, glance)
+  )
+
+kclusts %>%
+  unnest(cols = c(glanced)) %>%
+  ggplot(aes(k, tot.withinss)) +
+  geom_line(alpha = 0.5, size = 1.2, color = "midnightblue") +
+  geom_point(size = 2, color = "midnightblue")
+```
+
+
+```{r}
+library(plotly)
+
+p <- augment(final_clust, employment_demo) %>%
+  ggplot(aes(total, women, color = .cluster, name = occupation)) +
+  geom_point()
+
+ggplotly(p, height = 500)
+```
+

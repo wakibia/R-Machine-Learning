@@ -1,0 +1,5 @@
+"0","collect_predictions(ikea_fit) %>%"
+"0","  ggplot(aes(price, .pred)) +"
+"0","  geom_abline(lty = 2, color = ""gray50"") +"
+"0","  geom_point(alpha = 0.5, color = ""midnightblue"") +"
+"0","  coord_fixed()"

@@ -1,0 +1,263 @@
+---
+title: K-means clustering of employees employment status
+---
+  
+  
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+theme_set(theme_minimal())
+
+```
+
+
+```{r}
+bird_baths <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-08-31/bird_baths.csv")
+
+bird_baths %>%
+  count(urban_rural)
+```
+
+What does it contain
+
+```{r}
+bird_baths |> 
+  glimpse()
+
+
+```
+
+
+```{r}
+skimr::skim(bird_baths)
+```
+
+
+Begin Data Exploration
+
+```{r}
+top_birds <-
+  bird_baths %>%
+  filter(is.na(urban_rural)) %>%
+  arrange(-bird_count) %>%
+  slice_max(bird_count, n = 15) %>%
+  pull(bird_type)
+
+top_birds
+```
+
+
+```{r}
+bird_parsed <-
+  bird_baths %>%
+  
+  ## remove NA and select only birds in top_birds
+  filter(
+    !is.na(urban_rural),
+    bird_type %in% top_birds
+  ) %>%
+  group_by(urban_rural, bird_type) %>%
+  summarise(bird_count = mean(bird_count), .groups = "drop")
+
+p1 <-
+  bird_parsed %>%
+  ggplot(aes(bird_count, bird_type)) +
+  geom_segment(
+    data = bird_parsed %>%
+      pivot_wider(
+        names_from = urban_rural,
+        values_from = bird_count
+      ),
+    aes(x = Rural, xend = Urban, y = bird_type, yend = bird_type),
+    alpha = 0.7, color = "gray70", size = 1.5
+  ) +
+  geom_point(aes(color = urban_rural), size = 3) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(x = "Probability of seeing bird", y = NULL, color = NULL)
+
+p1
+```
+
+
+```{r}
+bird_df <-
+  bird_baths %>%
+  filter(
+    !is.na(urban_rural),
+    bird_type %in% top_birds
+  ) %>%
+  mutate(bird_count = if_else(bird_count > 0, "bird", "no bird")) %>%
+  mutate_if(is.character, as.factor)
+```
+
+
+
+Model
+
+
+```{r data budget}
+library(tidymodels)
+
+set.seed(123)
+bird_split <- initial_split(bird_df, strata = bird_count)
+bird_train <- training(bird_split)
+bird_test <- testing(bird_split)
+
+## cross-validation; default k=10
+set.seed(234)
+bird_folds <- vfold_cv(bird_train, strata = bird_count)
+bird_folds
+```
+
+Thia model uses the default engine and mode; thus there is no need to explicitly set them
+
+```{r logistic-regression}
+glm_spec <- logistic_reg()
+```
+
+
+```{r}
+rec_basic <-
+  recipe(bird_count ~ urban_rural + bird_type, data = bird_train) %>%
+  
+  ## create dummy variables for all the nominal/categorical variables included
+  step_dummy(all_nominal_predictors())
+
+## combine the recipe and the model via a workflow
+wf_basic <- workflow(rec_basic, glm_spec)
+```
+
+
+```{r resampling}
+doParallel::registerDoParallel()
+
+## save the predictions made from the resampling
+ctrl_preds <- control_resamples(save_pred = TRUE)
+rs_basic <- fit_resamples(wf_basic, bird_folds, control = ctrl_preds)
+```
+
+
+Model Performance
+
+The above uses the default metrics; accuracy and roc auc, you can specify others explicitly via the metric_set
+
+```{r}
+collect_metrics(rs_basic)
+```
+
+Our model has an accuracy of 0.8224 obtained from the cross validation - not that bad, better than random guessing
+
+
+ROC curve
+
+```{r roc-curve}
+augment(rs_basic) %>%
+  roc_curve(bird_count, .pred_bird) %>%
+  autoplot()
+```
+
+
+
+```{r add-interactions}
+
+## add extract step - add interactions
+
+rec_interact <-
+  rec_basic %>%
+  step_interact(~ starts_with("urban_rural"):starts_with("bird_type"))
+
+## update the workflow
+wf_interact <- workflow(rec_interact, glm_spec)
+rs_interact <- fit_resamples(wf_interact, bird_folds, control = ctrl_preds)
+```
+
+
+Model performance when interactions are added
+
+```{r}
+collect_metrics(rs_interact)
+
+```
+
+Adding the interactions doesn't appear to have a great impact on the accuracy
+
+The roc_auc however increase by 0.05
+
+```{r roc-curve-interactions}
+augment(rs_interact) %>%
+  roc_curve(bird_count, .pred_bird) %>%
+  autoplot()
+```
+
+We can also observe this in the differences between the two roc curves
+
+Evaluate the Model
+
+Fit the model to the training data
+
+```{r}
+bird_fit <- fit(wf_interact, bird_train)
+```
+
+
+
+```{r predict}
+predict(bird_fit, bird_test, type = "prob")
+
+```
+
+More Predictions
+
+```{r}
+new_bird_data <-
+  tibble(bird_type = top_birds) %>%
+  crossing(urban_rural = c("Urban", "Rural"))
+
+new_bird_data
+```
+
+
+`augment` predictions to our data
+
+
+```{r}
+bird_preds <-
+  augment(bird_fit, new_bird_data) %>%
+  bind_cols(
+    predict(bird_fit, new_bird_data, type = "conf_int")
+  )
+
+bird_preds
+```
+
+
+Error Bars
+
+
+```{r}
+p2 <-
+  bird_preds %>%
+  ggplot(aes(.pred_bird, bird_type, color = urban_rural)) +
+  geom_errorbar(aes(
+    xmin = .pred_lower_bird,
+    xmax = .pred_upper_bird
+  ),
+  width = .2, size = 1.2, alpha = 0.5
+  ) +
+  geom_point(size = 2.5) +
+  scale_x_continuous(labels = scales::percent) +
+  labs(x = "Predicted probability of seeing bird", y = NULL, color = NULL)
+
+p2
+```
+
+
+Combine the plots
+
+```{r}
+library(patchwork)
+
+p1 + p2
+```
+

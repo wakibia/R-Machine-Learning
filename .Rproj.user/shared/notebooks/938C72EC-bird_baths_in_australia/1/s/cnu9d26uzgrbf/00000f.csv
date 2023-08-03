@@ -1,0 +1,8 @@
+"0","bird_df <-"
+"0","  bird_baths %>%"
+"0","  filter("
+"0","    !is.na(urban_rural),"
+"0","    bird_type %in% top_birds"
+"0","  ) %>%"
+"0","  mutate(bird_count = if_else(bird_count > 0, ""bird"", ""no bird"")) %>%"
+"0","  mutate_if(is.character, as.factor)"

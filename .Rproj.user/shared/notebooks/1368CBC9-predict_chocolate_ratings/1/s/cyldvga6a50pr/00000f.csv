@@ -1,0 +1,8 @@
+"0","library(tidytext)"
+"0",""
+"0","tidy_chocolate <-"
+"0","  chocolate %>%"
+"0","  unnest_tokens(word, most_memorable_characteristics)"
+"0",""
+"0","tidy_chocolate %>%"
+"0","  count(word, sort = TRUE)"

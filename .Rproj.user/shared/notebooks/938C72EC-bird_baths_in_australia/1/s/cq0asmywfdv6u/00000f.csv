@@ -1,0 +1,18 @@
+"0","bird_baths |> "
+"0","  glimpse()"
+"1","Rows: 161,057"
+"1",""
+"1","
+"
+"1","Columns: 5"
+"1",""
+"1","
+"
+"1","$ survey_year [3m[38;5;246m<dbl>[39m[23m 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2014, 2…
+$ urban_rural [3m[38;5;246m<chr>[39m[23m ""Urban"", ""Urban"", ""Urban"", ""Urban"", ""Urban"", ""Urban"", ""…
+$ bioregions  [3m[38;5;246m<chr>[39m[23m ""South Eastern Queensland"", ""South Eastern Queensland"",…
+$ bird_type   [3m[38;5;246m<chr>[39m[23m ""Bassian Thrush"", ""Chestnut-breasted Mannikin"", ""Wild D…
+$ bird_count  [3m[38;5;246m<dbl>[39m[23m 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0…"
+"1",""
+"1","
+"

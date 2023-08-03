@@ -1,0 +1,23 @@
+"0","skimr::skim(bird_baths)"
+"1","── Data Summary ────────────────────────
+"
+"1","                           Values    
+"
+"1","Name                       bird_baths
+"
+"1","Number of rows             161057    
+"
+"1","Number of columns          5         
+"
+"1","_______________________              
+"
+"1","Column type frequency:               
+"
+"1","  character                3         
+"
+"1","  numeric                  2         
+"
+"1","________________________             
+"
+"1","Group variables            None      
+"

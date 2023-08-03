@@ -1,0 +1,5 @@
+"0","bird_baths %>%
+  count(urban_rural)
+"
+"2","Error in count(., urban_rural) : could not find function ""count""
+"

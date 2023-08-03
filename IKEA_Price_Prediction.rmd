@@ -1,0 +1,244 @@
+---
+title: IKEA Price Prediction
+---
+
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+library(skimr)
+library(janitor)
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+theme_set(theme_minimal())
+```
+
+
+```{r load data}
+ikea <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2020/2020-11-03/ikea.csv")
+glimpse(ikea)
+```
+
+```{r}
+skim(ikea)
+```
+
+
+
+```{r}
+ikea %>% 
+  clean_names() |> 
+  select(x1, price, depth:width) %>%
+  pivot_longer(depth:width, names_to = "dim") %>%
+  ggplot(aes(value, price, color = dim)) +
+  geom_point(alpha = 0.4, show.legend = FALSE) +
+  scale_y_log10() +
+  facet_wrap(~dim, scales = "free_x") +
+  labs(x = NULL)
+```
+
+Model Price
+
+
+```{r}
+ikea_df <- ikea %>%
+  select(price, name, category, depth, height, width) %>%
+  mutate(price = log10(price)) %>%
+  mutate_if(is.character, factor)
+
+ikea_df
+```
+
+
+```{r data budget}
+library(tidymodels)
+
+set.seed(123)
+ikea_split <- initial_split(ikea_df, strata = price)
+ikea_train <- training(ikea_split)
+ikea_test <- testing(ikea_split)
+
+## use bootstrap for resampling - we have a relatively small dataset
+set.seed(234)
+ikea_folds <- bootstraps(ikea_train, strata = price)
+ikea_folds
+```
+
+`usemodels::use_*` enables you to know the different models parameters - You can also work with the defaults
+
+```{r}
+library(usemodels)
+## this indicates the parameters and hyperparameters of the random forest - along with the defaults
+use_ranger(price ~ ., data = ikea_train)
+```
+
+Fit the model
+
+```{r}
+library(textrecipes)
+ranger_recipe <-
+  recipe(formula = price ~ ., data = ikea_train) %>%
+  ## lump up together the least frequent values of category and name
+  step_other(name, category, threshold = 0.01) %>%
+  step_clean_levels(name, category) %>%
+  ## impute the missing values with knn
+  step_impute_knn(depth, height, width)
+
+ranger_spec <-
+  rand_forest(
+    
+    ## parameters to tune: mtry, min_n, trees
+    mtry = tune(), 
+    min_n = tune(), 
+    trees = 1000
+    
+    ) %>%
+  set_mode("regression") %>%
+  set_engine("ranger")
+
+ranger_workflow <-
+  workflow() %>%
+  add_recipe(ranger_recipe) %>%
+  add_model(ranger_spec)
+
+## how they used to add recipes and model specification to the workflow
+
+# wkflow <- 
+#   workflow(ranger_recipe, ranger_spec)
+
+set.seed(8577)
+doParallel::registerDoParallel()
+ranger_tune <-
+  tune_grid(ranger_workflow,
+    resamples = ikea_folds,
+    grid = 11
+  )
+```
+
+
+Unlike other tools like sciki-learn, here you just give the grid of possible tuning hyperparams that you want, and tidymodels does so automatically. At least for not very sophisticated modeling
+
+Best Model Using `rmse metric`
+
+```{r}
+show_best(ranger_tune, metric = "rmse")
+```
+
+
+Best Model using `rsq metric`
+
+```{r}
+show_best(ranger_tune, metric = "rsq")
+
+```
+
+
+Explore the parameter combinations
+
+
+```{r}
+autoplot(ranger_tune)
+
+```
+
+
+Extract the Best Model
+
+
+```{r}
+final_rf <- ranger_workflow %>%
+  finalize_workflow(select_best(ranger_tune))
+
+final_rf
+```
+
+
+Fit the Final Model to the Training Data
+
+
+```{r}
+ikea_fit <- last_fit(final_rf, ikea_split)
+ikea_fit
+```
+
+
+Fitted Model on Training Data Performance
+
+```{r}
+collect_metrics(ikea_fit)
+
+```
+
+
+Not that bad
+
+Actual Vs Fitted 
+
+
+```{r}
+collect_predictions(ikea_fit) %>%
+  ggplot(aes(price, .pred)) +
+  geom_abline(lty = 2, color = "gray50") +
+  geom_point(alpha = 0.5, color = "midnightblue") +
+  coord_fixed()
+```
+
+Predict the 15th
+
+
+```{r}
+predict(ikea_fit$.workflow[[1]], ikea_test[15, ])
+
+```
+
+Feature Importance
+
+Here we first get the best parameters and then use them to fit our training data
+
+```{r}
+library(vip)
+
+imp_spec <- ranger_spec %>%
+  finalize_model(select_best(ranger_tune)) %>%
+  set_engine("ranger", importance = "permutation")
+
+workflow() %>%
+  add_recipe(ranger_recipe) %>%
+  add_model(imp_spec) %>%
+  fit(ikea_train) %>%
+  extract_fit_parsnip() %>%
+  vip(aesthetics = list(alpha = 0.8, fill = "midnightblue"))
+```
+
+
+
+<!-- ROC Curve -->
+
+<!-- ```{r} -->
+<!-- collect_predictions(crash_fit) %>% -->
+<!--   roc_curve(injuries, .pred_injuries) %>% -->
+<!--   ggplot(aes(x = 1 - specificity, y = sensitivity)) + -->
+<!--   geom_line(size = 1.5, color = "midnightblue") + -->
+<!--   geom_abline( -->
+<!--     lty = 2, alpha = 0.5, -->
+<!--     color = "gray50", -->
+<!--     size = 1.2 -->
+<!--   ) + -->
+<!--   coord_equal() -->
+<!-- ``` -->
+
+<!-- Save our model -->
+
+<!-- ```{r} -->
+<!-- crash_wf_model <- crash_fit$.workflow[[1]] -->
+<!-- predict(crash_wf_model, crash_test[222, ]) -->
+
+<!-- ``` -->
+
+
+<!-- ```{r} -->
+<!-- saveRDS(crash_wf_model, "crash-wf-model.rds") -->
+
+<!-- collect_metrics(crash_res) %>% -->
+<!--   write_csv("crash-model-metrics.csv") -->
+<!-- ``` -->
+

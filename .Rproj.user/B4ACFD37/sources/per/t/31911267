@@ -1,0 +1,28 @@
+{
+    "id": "31911267",
+    "path": "C:/Users/cmwak/2023RProjects/tidymodelling/bird_baths_in_australia.rmd",
+    "project_path": "bird_baths_in_australia.rmd",
+    "type": "r_markdown",
+    "hash": "1128720079",
+    "contents": "",
+    "dirty": false,
+    "created": 1689866121951.0,
+    "source_on_save": false,
+    "relative_order": 9,
+    "properties": {
+        "tempName": "Untitled1",
+        "source_window_id": "",
+        "Source": "Source",
+        "cursorPosition": "177,6",
+        "scrollLine": "0",
+        "last_setup_crc32": ""
+    },
+    "folds": "",
+    "lastKnownWriteTime": 1689880294,
+    "encoding": "UTF-8",
+    "collab_server": "",
+    "source_window": "",
+    "last_content_update": 1689880294983,
+    "read_only": false,
+    "read_only_alternatives": []
+}

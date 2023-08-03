@@ -1,0 +1,187 @@
+---
+title: Predicting Ratings for Board Games
+---
+  
+  
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE)
+theme_set(theme_minimal())
+
+```
+
+
+```{r load-data}
+ratings <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-01-25/ratings.csv")
+details <- read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2022/2022-01-25/details.csv")
+
+ratings_joined <-
+  ratings %>%
+  left_join(details, by = "id")
+
+ggplot(ratings_joined, aes(average)) +
+  geom_histogram(alpha = 0.8)
+```
+
+
+Explore Data
+
+```{r}
+ratings_joined %>%
+  filter(!is.na(minage)) %>%
+  mutate(minage = cut_number(minage, 4)) %>%
+  ggplot(aes(minage, average, fill = minage)) +
+  geom_boxplot(alpha = 0.2, show.legend = FALSE)
+```
+
+
+xgboost Model
+
+
+```{r data-budgeting}
+library(tidymodels)
+
+set.seed(123)
+game_split <-
+  ratings_joined %>%
+  select(name, average, matches("min|max"), boardgamecategory) %>%
+  na.omit() %>%
+  initial_split(strata = average)
+game_train <- training(game_split)
+game_test <- testing(game_split)
+
+set.seed(234)
+game_folds <- vfold_cv(game_train, strata = average)
+game_folds
+```
+
+
+```{r text-preprocessing}
+split_category <- function(x) {
+  x %>%
+    str_split(", ") %>%
+    map(str_remove_all, "[:punct:]") %>%
+    map(str_squish) %>%
+    map(str_to_lower) %>%
+    map(str_replace_all, " ", "_")
+}
+
+game_rec <-
+  recipe(average ~ ., data = game_train) %>%
+  update_role(name, new_role = "id") %>%
+  step_tokenize(boardgamecategory, custom_token = split_category) %>%
+  step_tokenfilter(boardgamecategory, max_tokens = 30) %>%
+  step_tf(boardgamecategory)
+
+## just to make sure this works as expected
+game_prep <- prep(game_rec)
+bake(game_prep, new_data = NULL) %>% str()
+```
+
+
+Model
+
+```{r xgboost-model}
+xgb_spec <-
+  boost_tree(
+    trees = tune(),
+    mtry = tune(),
+    min_n = tune(),
+    learn_rate = 0.01
+  ) %>%
+  set_engine("xgboost") %>%
+  set_mode("regression")
+
+xgb_wf <- workflow(game_rec, xgb_spec)
+xgb_wf
+```
+
+
+Use racing to tune the parameter {racing from `finetune`}
+
+```{r}
+library(finetune)
+doParallel::registerDoParallel()
+
+set.seed(234)
+xgb_game_rs <-
+  tune_race_anova(
+    xgb_wf,
+    game_folds,
+    grid = 20,
+    control = control_race(verbose_elim = TRUE)
+  )
+
+xgb_game_rs
+```
+
+Plot the Racing Results
+
+```{r}
+plot_race(xgb_game_rs)
+```
+
+Final Workflow
+
+```{r extract-final-workflow}
+xgb_last <-
+  xgb_wf %>%
+  finalize_workflow(select_best(xgb_game_rs, "rmse")) %>%
+  last_fit(game_split)
+
+xgb_last
+```
+
+
+Variable Importance
+
+
+```{r}
+library(vip)
+
+xgb_fit <- extract_fit_parsnip(xgb_last)
+vip(xgb_fit, geom = "point", num_features = 12)
+```
+
+
+
+Model explainability using shap
+
+
+```{r}
+library(SHAPforxgboost)
+
+game_shap <-
+  shap.prep(
+    xgb_model = extract_fit_engine(xgb_fit),
+    X_train = bake(game_prep,
+      has_role("predictor"),
+      new_data = NULL,
+      composition = "matrix"
+    )
+  )
+```
+
+
+Feature Summary
+
+```{r features-summary}
+shap.plot.summary(game_shap)
+```
+
+
+Partial Dependence Plots
+
+
+```{r pdp plots}
+shap.plot.dependence(
+  game_shap,
+  x = "minage",
+  color_feature = "minplayers",
+  size0 = 1.2,
+  smooth = FALSE, add_hist = TRUE
+)
+
+```
+

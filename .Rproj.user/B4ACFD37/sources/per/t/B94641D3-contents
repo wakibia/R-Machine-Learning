@@ -1,0 +1,170 @@
+---
+title: Child Care Cost in America
+---
+
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE)
+theme_set(theme_minimal())
+```
+
+
+
+```{r load-data}
+
+childcare_costs <- read_csv('https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2023/2023-05-09/childcare_costs.csv')
+
+glimpse(childcare_costs)
+
+```
+
+
+### Data Exploration
+
+
+```{r}
+childcare_costs |>
+  ggplot(aes(study_year, mcsa, group = study_year, fill = study_year)) +
+  geom_boxplot(alpha = 0.8, show.legend = FALSE) +
+  scale_fill_distiller(palette = "RdPu")
+```
+
+
+
+```{r}
+childcare_costs |>
+  ggplot(aes(mhi_2018, mcsa, color = flfpr_20to64)) +
+  geom_point(alpha = 0.5) +
+  scale_x_log10() +
+  scale_color_viridis_c()
+
+
+
+```
+
+
+
+
+```{r}
+childcare_costs |>
+  select(mcsa, starts_with("one_race"), mhi_2018) |>
+  select(-one_race) |>
+  pivot_longer(starts_with("one_race")) |>
+  ggplot(aes(value, mcsa, color = mhi_2018)) +
+  geom_point(alpha = 0.5) +
+  facet_wrap(vars(name), scales = "free_x") +
+  scale_color_viridis_c() +
+  labs(x = "% of population")
+```
+
+
+### Build Model
+
+#### Data Budget
+
+```{r}
+library(tidymodels)
+
+set.seed(123)
+childcare_split <- childcare_costs |>
+  select(-matches("^mc_|^mfc")) |>
+  select(-county_fips_code) |>
+  na.omit() |>
+  initial_split(strata = mcsa)
+
+childcare_train <- training(childcare_split)
+childcare_test <- testing(childcare_split)
+
+set.seed(234)
+childcare_set <- validation_split(childcare_train)
+childcare_set
+```
+
+
+Parameters to Tune
+
+```{r}
+
+xgb_spec <-
+  boost_tree(
+    trees = 500,
+    min_n = tune(),
+    mtry = tune(),
+    stop_iter = tune(),
+    learn_rate = 0.01
+  ) |>
+  set_engine("xgboost", validation = 0.2) |>
+  set_mode("regression")
+
+xgb_wf <- workflow(mcsa ~ ., xgb_spec)
+xgb_wf
+
+```
+
+
+Fit the model
+
+
+```{r}
+doParallel::registerDoParallel()
+set.seed(234)
+xgb_rs <- tune_grid(xgb_wf, childcare_set, grid = 15)
+xgb_rs
+```
+
+Evaluate Results
+
+
+```{r}
+autoplot(xgb_rs)
+```
+
+
+What was the bests model
+
+```{r}
+show_best(xgb_rs, "rmse")
+```
+
+
+Fit the data with the best model
+
+
+```{r}
+childcare_fit <- xgb_wf |>
+  finalize_workflow(select_best(xgb_rs, "rmse")) |>
+  last_fit(childcare_split)
+
+childcare_fit
+```
+
+
+Model performance on the training data
+
+```{r}
+collect_metrics(childcare_fit)
+```
+
+
+Variable Importance - What are the most important models in making the model predictions
+
+
+```{r}
+library(vip)
+
+extract_workflow(childcare_fit) |>
+  extract_fit_parsnip() |>
+  vip(num_features = 15, geom = "point")
+```
+
+Create a model object using `Vetiver` that can be used in production
+
+
+```{r}
+library(vetiver)
+v <- extract_workflow(childcare_fit) |>
+  vetiver_model("childcare-costs-xgb")
+v
+```
+

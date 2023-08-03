@@ -1,0 +1,4 @@
+"0","library(tidymodels)"
+"2","Error: package or namespace load failed for ‘tidymodels’ in loadNamespace(i, c(lib.loc, .libPaths()), versionCheck = vI[[i]]):
+ namespace ‘vctrs’ 0.5.2 is already loaded, but >= 0.6.0 is required
+"

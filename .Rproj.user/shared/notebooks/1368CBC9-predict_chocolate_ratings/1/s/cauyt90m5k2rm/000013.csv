@@ -1,0 +1,109 @@
+"0","final_wf
+"
+"1","══ Workflow [trained] ══════════════════════════════════════════════════════════════════════"
+"1",""
+"1","
+"
+"1","[3mPreprocessor:[23m Recipe"
+"1",""
+"1","
+"
+"1","[3mModel:[23m svm_linear()"
+"1",""
+"1","
+"
+"1",""
+"1",""
+"1","
+"
+"1","── Preprocessor ────────────────────────────────────────────────────────────────────────────"
+"1",""
+"1","
+"
+"1","3 Recipe Steps"
+"1",""
+"1","
+"
+"1",""
+"1",""
+"1","
+"
+"1","• step_tokenize()
+• step_tokenfilter()
+• step_tfidf()"
+"1",""
+"1","
+"
+"1",""
+"1",""
+"1","
+"
+"1","── Model ───────────────────────────────────────────────────────────────────────────────────"
+"1",""
+"1","
+"
+"1","$TypeDetail
+[1] ""L2-regularized L2-loss support vector regression primal (L2R_L2LOSS_SVR)""
+
+$Type
+[1] 11
+
+$W
+     tfidf_most_memorable_characteristics_acidic tfidf_most_memorable_characteristics_and
+[1,]                                  0.03314415                                0.2242267
+     tfidf_most_memorable_characteristics_astringent
+[1,]                                      0.08140962
+     tfidf_most_memorable_characteristics_banana tfidf_most_memorable_characteristics_base
+[1,]                                   0.2119825                                -0.0120384
+     tfidf_most_memorable_characteristics_basic tfidf_most_memorable_characteristics_berry
+[1,]                                 0.03389636                                     0.2461
+     tfidf_most_memorable_characteristics_bitter tfidf_most_memorable_characteristics_black
+[1,]                                  -0.2309039                                  0.1551164
+     tfidf_most_memorable_characteristics_bland tfidf_most_memorable_characteristics_bold
+[1,]                               -0.004990545                                0.09119172
+     tfidf_most_memorable_characteristics_bright
+[1,]                                   0.1181554
+     tfidf_most_memorable_characteristics_brownie
+[1,]                                    0.1779416
+     tfidf_most_memorable_characteristics_burnt tfidf_most_memorable_characteristics_butter
+[1,]                                -0.04327869                                  0.06279501
+     tfidf_most_memorable_characteristics_candy
+[1,]                                 0.00534472
+     tfidf_most_memorable_characteristics_caramel
+[1,]                                    0.2187525
+     tfidf_most_memorable_characteristics_chalky
+[1,]                                 -0.05950617
+     tfidf_most_memorable_characteristics_chemical
+[1,]                                    -0.1706065
+     tfidf_most_memorable_characteristics_cherry tfidf_most_memorable_characteristics_choco
+[1,]                                   0.2231714                                   0.182411
+     tfidf_most_memorable_characteristics_citrus
+[1,]                                    0.140885
+     tfidf_most_memorable_characteristics_coarse tfidf_most_memorable_characteristics_cocoa
+[1,]                                  0.09607627                                  0.3289403
+     tfidf_most_memorable_characteristics_coffee
+[1,]                                  0.09856237
+     tfidf_most_memorable_characteristics_complex
+[1,]                                    0.2664821
+     tfidf_most_memorable_characteristics_creamy tfidf_most_memorable_characteristics_dairy
+[1,]                                   0.2905887                                  0.1570511
+     tfidf_most_memorable_characteristics_dark tfidf_most_memorable_characteristics_deep
+[1,]                                 0.1459521                                0.07653688
+     tfidf_most_memorable_characteristics_dirty tfidf_most_memorable_characteristics_dried
+[1,]                                -0.05931406                                  0.1911165
+     tfidf_most_memorable_characteristics_dry tfidf_most_memorable_characteristics_earthy"
+"1",""
+"1","
+"
+"1",""
+"1",""
+"1","
+"
+"1","..."
+"1",""
+"1","
+"
+"1","and 96 more lines."
+"1",""
+"1","
+"

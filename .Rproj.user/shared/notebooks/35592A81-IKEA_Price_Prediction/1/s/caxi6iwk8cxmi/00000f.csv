@@ -1,0 +1,10 @@
+"0","ikea_fit <- last_fit(final_rf, ikea_split)"
+"0","ikea_fit"
+"1","# Resampling results
+"
+"1","#"
+"1"," "
+"1","Manual resampling"
+"1"," "
+"1","
+"

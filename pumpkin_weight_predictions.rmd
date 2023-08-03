@@ -1,0 +1,192 @@
+---
+title: Predicting Giant Pumpkin Weights with workflowsets
+---
+  
+  
+```{r setup, include=FALSE}
+library(tidyverse)
+library(knitr)
+knitr::opts_chunk$set(warning = FALSE)
+theme_set(theme_minimal())
+
+```
+
+
+The workflow sets enables us to combine multiple learning algorithms and recipes
+
+
+```{r load data}
+pumpkins_raw <- readr::read_csv("https://raw.githubusercontent.com/rfordatascience/tidytuesday/master/data/2021/2021-10-19/pumpkins.csv")
+
+pumpkins <-
+  pumpkins_raw %>%
+  separate(id, into = c("year", "type")) %>%
+  mutate(across(c(year, weight_lbs, ott, place), parse_number)) %>%
+  filter(type == "P") %>%
+  select(weight_lbs, year, place, ott, gpc_site, country)
+
+pumpkins
+```
+
+
+Data Exploration
+
+
+```{r plot-1}
+pumpkins %>%
+  filter(ott > 20, ott < 1e3) %>%
+  ggplot(aes(ott, weight_lbs, color = place)) +
+  geom_point(alpha = 0.2, size = 1.1) +
+  labs(x = "over-the-top inches", y = "weight (lbs)") +
+  scale_color_viridis_c()
+```
+
+
+
+```{r plot-2}
+pumpkins %>%
+  filter(ott > 20, ott < 1e3) %>%
+  ggplot(aes(ott, weight_lbs)) +
+  geom_point(alpha = 0.2, size = 1.1, color = "gray60") +
+  geom_smooth(aes(color = factor(year)),
+    method = lm, formula = y ~ splines::bs(x, 3),
+    se = FALSE, size = 1.5, alpha = 0.6
+  ) +
+  labs(x = "over-the-top inches", y = "weight (lbs)", color = NULL) +
+  scale_color_viridis_d()
+```
+
+
+
+```{r plot-3}
+pumpkins %>%
+  mutate(
+    country = fct_lump(country, n = 10),
+    country = fct_reorder(country, weight_lbs)
+  ) %>%
+  ggplot(aes(country, weight_lbs, color = country)) +
+  geom_boxplot(outlier.colour = NA) +
+  geom_jitter(alpha = 0.1, width = 0.15) +
+  labs(x = NULL, y = "weight (lbs)") +
+  theme(legend.position = "none")
+```
+
+
+## Workflow set
+
+
+```{r}
+library(tidymodels)
+
+set.seed(123)
+pumpkin_split <- pumpkins %>%
+  filter(ott > 20, ott < 1e3) %>%
+  initial_split(strata = weight_lbs)
+
+pumpkin_train <- training(pumpkin_split)
+pumpkin_test <- testing(pumpkin_split)
+
+set.seed(234)
+pumpkin_folds <- vfold_cv(pumpkin_train, strata = weight_lbs)
+pumpkin_folds
+```
+
+
+recipe
+
+
+```{r recipes}
+base_rec <-
+  recipe(weight_lbs ~ ott + year + country + gpc_site,
+    data = pumpkin_train
+  ) %>%
+  step_other(country, gpc_site, threshold = 0.02)
+
+ind_rec <-
+  base_rec %>%
+  step_dummy(all_nominal_predictors())
+
+spline_rec <-
+  ind_rec %>%
+  step_bs(ott)
+```
+
+
+```{r more-recipes}
+rf_spec <-
+  rand_forest(trees = 1e3) %>%
+  set_mode("regression") %>%
+  set_engine("ranger")
+
+mars_spec <-
+  mars() %>%
+  set_mode("regression") %>%
+  set_engine("earth")
+
+lm_spec <- linear_reg()
+```
+
+
+Put preprocessing and models together in a `workflow_set`
+
+```{r}
+pumpkin_set <-
+  workflow_set(
+    list(base_rec, ind_rec, spline_rec),
+    list(rf_spec, mars_spec, lm_spec),
+    
+    ## by default workflow_set crosses all the recipes with each model
+    ## putting it to FALSE ensures that each recipe corresponds to specific model in the order in which they appear
+    
+    cross = FALSE
+  )
+
+pumpkin_set
+```
+
+
+
+Resample
+
+
+```{r}
+doParallel::registerDoParallel()
+set.seed(2021)
+
+pumpkin_rs <-
+  workflow_map(
+    pumpkin_set,
+    "fit_resamples",
+    resamples = pumpkin_folds
+  )
+
+pumpkin_rs
+```
+
+
+Evaluate the workflow set
+
+
+```{r model-plot1}
+autoplot(pumpkin_rs)
+```
+
+
+Extract the specific workflow we want
+
+```{r}
+final_fit <-
+  extract_workflow(pumpkin_rs, "recipe_3_linear_reg") %>%
+  fit(pumpkin_train)
+```
+
+
+Model Summary
+
+```{r}
+tidy(final_fit) %>%
+  arrange(-abs(estimate))
+```
+
+
+
